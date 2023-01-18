@@ -7,6 +7,13 @@
         xmlns:ServerManagement="clr-namespace:Mag_ACClientLauncher.ServerManagement" x:Class="Mag_ACClientLauncher.MainWindow"
         mc:Ignorable="d"
         Title="Mag-ACClientLauncher" Height="400" Width="600" MinWidth="500" MinHeight="240">
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Themes/Light.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Window.Resources>
     <Grid>
         <Grid.Resources>
             <Style TargetType="ListViewItem">

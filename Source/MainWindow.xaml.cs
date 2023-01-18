@@ -2,8 +2,11 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
+using System.Management;
 using System.Net.Http;
+using System.Security.Principal;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -11,6 +14,7 @@ using System.Windows.Controls;
 
 using Mag_ACClientLauncher.ServerManagement;
 using Mag_ACClientLauncher.Win32;
+using Microsoft.Win32;
 
 namespace Mag_ACClientLauncher
 {
@@ -22,10 +26,68 @@ namespace Mag_ACClientLauncher
         private const string DefaultPublicServerListUri = "https://raw.githubusercontent.com/acresources/serverslist/master/Servers.xml";
 
         private static readonly HttpClient httpClient = new HttpClient();
+        private const string RegistryKeyPath = @"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize";
+
+        private const string RegistryValueName = "AppsUseLightTheme";
+
+        private enum WindowsTheme
+        {
+            Light,
+            Dark
+        }
+
+        public void WatchTheme()
+        {
+            var currentUser = WindowsIdentity.GetCurrent();
+            string query = string.Format(
+                CultureInfo.InvariantCulture,
+                @"SELECT * FROM RegistryValueChangeEvent WHERE Hive = 'HKEY_USERS' AND KeyPath = '{0}\\{1}' AND ValueName = '{2}'",
+                currentUser.User.Value,
+                RegistryKeyPath.Replace(@"\", @"\\"),
+                RegistryValueName);
+
+            try
+            {
+                var watcher = new ManagementEventWatcher(query);
+                watcher.EventArrived += (sender, args) =>
+                {
+                    WindowsTheme newWindowsTheme = GetWindowsTheme();
+                    // React to new theme
+                };
+
+                // Start listening for events
+                watcher.Start();
+            }
+            catch (Exception)
+            {
+                // This can fail on Windows 7
+            }
+
+            WindowsTheme initialTheme = GetWindowsTheme();
+        }
+
+        private static WindowsTheme GetWindowsTheme()
+        {
+            using (RegistryKey key = Registry.CurrentUser.OpenSubKey(RegistryKeyPath))
+            {
+                object registryValueObject = key?.GetValue(RegistryValueName);
+                if (registryValueObject == null)
+                {
+                    return WindowsTheme.Light;
+                }
+
+                int registryValue = (int)registryValueObject;
+
+                return registryValue > 0 ? WindowsTheme.Light : WindowsTheme.Dark;
+            }
+        }
 
         public MainWindow()
         {
             InitializeComponent();
+            var theme = GetWindowsTheme();
+            var uri = new Uri($"/Themes/{theme}.xaml", UriKind.Relative);
+            this.Resources.MergedDictionaries[0].Source = uri;
 
             Title += " 1.5"; // TODO: !!!!! ATTENTION ===== Update line 55 in AssemblyInfo.cs ===== ATTENTION !!!!!
 
